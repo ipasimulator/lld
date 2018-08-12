@@ -199,6 +199,7 @@ private:
   uint64_t SizeOfImage;
   uint64_t SizeOfHeaders;
 
+  OutputSection *MhdrSec; // [port] CHANGED: Added, [mhdr].
   OutputSection *TextSec;
   OutputSection *RdataSec;
   OutputSection *BuildidSec;
@@ -418,6 +419,7 @@ void Writer::createSections() {
   };
 
   // Try to match the section order used by link.exe.
+  MhdrSec = CreateSection(".mhdr", DATA | R); // [port] CHANGED: Added, [mhdr].
   TextSec = CreateSection(".text", CODE | R | X);
   CreateSection(".bss", BSS | R | W);
   RdataSec = CreateSection(".rdata", DATA | R);
@@ -429,6 +431,9 @@ void Writer::createSections() {
   DidatSec = CreateSection(".didat", DATA | R);
   RsrcSec = CreateSection(".rsrc", DATA | R);
   RelocSec = CreateSection(".reloc", DATA | DISCARDABLE | R);
+
+  // [port] CHANGED: Added, [mhdr].
+  MhdrSec->addChunk(make<MhdrChunk>());
 
   // Then bin chunks by name and output characteristics.
   std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> Map;
