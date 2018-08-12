@@ -280,6 +280,14 @@ private:
   StringRef Str;
 };
 
+// [port] CHANGED: Added the whole class, [mhdr].
+// A chunk for Mach-O header (in `.mhdr` section).
+class MhdrChunk : public Chunk {
+public:
+  MhdrChunk() {}
+  size_t getSize() const override { return 4096; }
+};
+
 static const uint8_t ImportThunkX86[] = {
     0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // JMP *0x0
 };
