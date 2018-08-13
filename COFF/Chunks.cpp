@@ -667,18 +667,18 @@ void MhdrChunk::finalizeContents() {
   // Fill `NormalizedFile`.
   File = new NormalizedFile();
   File->arch = MachOLinkingContext::Arch::arch_x86; // TODO: Dynamically select.
-  File->fileType = llvm::MachO::MH_EXECUTE;         // TODO: Or MH_DYLIB.
+  File->fileType = MachO::MH_EXECUTE;         // TODO: Or MH_DYLIB.
   // TODO: Fill File->flags.
 
   // Add segments and sections. Every section in PE corresponds to one segment
-  // containing one section in Mach-O header for now.
-  // TODO: Not everything is copied here. Most importantly, no file offsets are
-  // given.
+  // containing one section in Mach-O header for now. Note that not everything
+  // is filled here. For example, we don't even know section sizes yet. Those
+  // things are filled later in function `MhdrChunk::writeTo`.
   for (auto &&os : *OutputSections) {
     Segment segment;
     segment.name = os->Name;
     segment.address = os->getRVA();
-    segment.size = os->getVirtualSize();
+    segment.size = 4096;
     segment.init_access =
         MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
     segment.max_access = segment.init_access;
@@ -686,9 +686,7 @@ void MhdrChunk::finalizeContents() {
     Section section;
     section.segmentName = os->Name;
     section.sectionName = os->Name;
-    //section.alignment = 4096; // TODO: Just a guess.
     section.address = os->getRVA();
-    // TODO: We can't really now size of the section right now.
     section.content = ArrayRef<uint8_t>(nullptr, 4096);
 
     File->segments.push_back(segment);
@@ -699,9 +697,21 @@ void MhdrChunk::finalizeContents() {
   Size = headerAndLoadCommandsSize(*File);
 }
 void MhdrChunk::writeTo(uint8_t *Buf) const {
+  // Fix some things inside `NormalizedFile` we know now.
+  size_t i = 0;
+  for (auto &&os : *OutputSections) {
+    File->segments[i].size = os->getVirtualSize();
+    File->sections[i].content = ArrayRef<uint8_t>(nullptr, os->getRawSize());
+  }
+
   // Write Mach-O header and load commands using the `NormalizedFile` filled
   // inside `finalizeContents`.
   lld::mach_o::normalized::writeHeaderAndLoadCommands(*File, Buf);
+
+  // Fix things we know now but cannot be specified in `NormalizedFile` (i.e.,
+  // we have to fix them manually in the buffer).
+  auto header = reinterpret_cast<MachO::mach_header *>(Buf);
+  // TODO: Fix file offsets.
 }
 MhdrChunk *MhdrChunk::Instance;
 
