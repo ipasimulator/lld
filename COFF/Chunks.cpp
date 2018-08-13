@@ -655,21 +655,22 @@ void MergeChunk::writeTo(uint8_t *Buf) const {
 
 // [port] CHANGED: Added implementation of class `MhdrChunk`, [mhdr].
 // See also `MachObjectWriter::writeObject` and `MachOFileLayout::MachOFileLayout`.
+MhdrChunk::~MhdrChunk() { delete File; }
 void MhdrChunk::finalizeContents() {
   using namespace lld::mach_o::normalized;
 
   // Inspired by `llvm::mach_o::normalized::readBinary`.
   
-  // Construct `NormalizedFile`.
-  NormalizedFile file;
-  file.arch = MachOLinkingContext::Arch::arch_x86; // TODO: Dynamically select.
-  file.fileType = llvm::MachO::MH_EXECUTE; // TODO: Or MH_DYLIB.
+  // Fill `NormalizedFile`.
+  File = new NormalizedFile();
+  File->arch = MachOLinkingContext::Arch::arch_x86; // TODO: Dynamically select.
+  File->fileType = llvm::MachO::MH_EXECUTE; // TODO: Or MH_DYLIB.
 
   // Compute size of the header.
-  Size = headerAndLoadCommandsSize(file);
+  Size = headerAndLoadCommandsSize(*File);
 }
 void MhdrChunk::writeTo(uint8_t *Buf) const {
-
+  
 }
 
 } // namespace coff
