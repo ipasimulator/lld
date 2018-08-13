@@ -35,6 +35,8 @@ namespace mach_o {
 namespace normalized {
 
 size_t headerAndLoadCommandsSize(const NormalizedFile &file);
+llvm::Error writeHeaderAndLoadCommands(const NormalizedFile &file,
+                                       uint8_t *buffer);
 }
 }
 }
@@ -643,7 +645,8 @@ void MhdrChunk::finalizeContents() {
   Size = headerAndLoadCommandsSize(*File);
 }
 void MhdrChunk::writeTo(uint8_t *Buf) const {
-  
+  // Write Mach-O header and load commands using the `NormalizedFile` filled inside `finalizeContents`.
+  lld::mach_o::normalized::writeHeaderAndLoadCommands(*File, Buf);
 }
 
 } // namespace coff

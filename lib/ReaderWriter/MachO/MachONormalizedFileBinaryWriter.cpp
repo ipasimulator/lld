@@ -122,6 +122,9 @@ public:
   /// file may need the 'x' bit set.
   llvm::Error writeBinary(StringRef path);
 
+  // [port] CHANGED: Added, [mhdr].
+  llvm::Error writeHeaderAndLoadCommands(uint8_t *buffer);
+
 private:
   uint32_t    loadCommandsSize(uint32_t &count);
   void        buildFileOffsets();
@@ -1545,6 +1548,19 @@ llvm::Error MachOFileLayout::writeBinary(StringRef path) {
 llvm::Error writeBinary(const NormalizedFile &file, StringRef path) {
   MachOFileLayout layout(file);
   return layout.writeBinary(path);
+}
+
+// [port] CHANGED: Added the whole function, [mhdr].
+llvm::Error MachOFileLayout::writeHeaderAndLoadCommands(uint8_t *buffer) {
+  _buffer = buffer;
+  writeMachHeader();
+  return writeLoadCommands();
+}
+
+// [port] CHANGED: Added the whole function, [mhdr].
+llvm::Error writeHeaderAndLoadCommands(const NormalizedFile &file, uint8_t *buffer) {
+  MachOFileLayout layout(file);
+  return layout.writeHeaderAndLoadCommands(buffer);
 }
 
 } // namespace normalized
