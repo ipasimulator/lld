@@ -1441,6 +1441,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Needed for MSVC 2017 15.5 CRT.
   Symtab->addAbsolute(mangle("__enclave_config"), 0);
 
+  // [port] CHANGED: Added, [mhdr].
+  // TODO: Create `MhdrChunk` already here instead of this forward declaration.
+  Symtab->addAbsolute(mangle("_mh_dylib_header"),
+                      0); // TODO: Or `_mh_execute_header`.
+
   // This code may add new undefined symbols to the link, which may enqueue more
   // symbol resolution tasks, so we need to continue executing tasks until we
   // converge.
