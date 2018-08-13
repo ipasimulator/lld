@@ -29,16 +29,12 @@ using namespace llvm::support::endian;
 using namespace llvm::COFF;
 using llvm::support::ulittle32_t;
 
-// [port] CHANGED: Added the whole declaration of class `MachOFileLayout`, [mhdr].
+// [port] CHANGED: Added all the forward declarations in `lld::mach_o::normalized`, [mhdr].
 namespace lld {
 namespace mach_o {
 namespace normalized {
 
-class MachOFileLayout {
-public:
-  MachOFileLayout(const NormalizedFile &file);
-  size_t headerAndLoadCommandsSize() const;
-};
+size_t headerAndLoadCommandsSize(const NormalizedFile &file);
 }
 }
 }
@@ -638,14 +634,12 @@ void MhdrChunk::finalizeContents() {
   // Inspired by `llvm::mach_o::normalized::readBinary`.
   
   // Construct `NormalizedFile`.
-  std::unique_ptr<NormalizedFile> f(new NormalizedFile());
-  f->arch = MachOLinkingContext::Arch::arch_x86; // TODO: Dynamically select.
+  NormalizedFile file;
+  file.arch = MachOLinkingContext::Arch::arch_x86; // TODO: Dynamically select.
+  file.fileType = llvm::MachO::MH_EXECUTE; // TODO: Or MH_DYLIB.
 
-  // Construct `MachOFileLayout` from the `NormalizedFile`.
-  MachOFileLayout layout(*f);
-
-  // Extract size of the header.
-  Size = layout.headerAndLoadCommandsSize();
+  // Compute size of the header.
+  Size = headerAndLoadCommandsSize(file);
 }
 void MhdrChunk::writeTo(uint8_t *Buf) const {
 
