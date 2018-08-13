@@ -431,7 +431,11 @@ void Writer::createSections() {
   RelocSec = CreateSection(".reloc", DATA | DISCARDABLE | R);
 
   // [port] CHANGED: Added, [mhdr].
-  MhdrSec->addChunk(make<MhdrChunk>(OutputSections));
+  auto mhdrChunk = make<MhdrChunk>(OutputSections);
+  MhdrSec->addChunk(mhdrChunk);
+  Symbol *mhdrSym = Symtab->findUnderscore(
+      "_mh_dylib_header"); // TODO: Or `_mh_execute_header`.
+  replaceSymbol<DefinedSynthetic>(mhdrSym, mhdrSym->getName(), mhdrChunk);
 
   // Then bin chunks by name and output characteristics.
   std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> Map;
