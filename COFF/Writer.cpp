@@ -431,7 +431,7 @@ void Writer::createSections() {
   RelocSec = CreateSection(".reloc", DATA | DISCARDABLE | R);
 
   // [port] CHANGED: Added, [mhdr].
-  MhdrSec->addChunk(make<MhdrChunk>());
+  MhdrSec->addChunk(make<MhdrChunk>(OutputSections));
 
   // Then bin chunks by name and output characteristics.
   std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> Map;

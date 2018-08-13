@@ -12,12 +12,15 @@
 #include "Symbols.h"
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/ReaderWriter/MachOLinkingContext.h" // [port] CHANGED: Added, [mhdr].
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/BinaryFormat/MachO.h" // [port] CHANGED: Added, [mhdr].
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
+#include "../lib/ReaderWriter/MachO/MachONormalizedFile.h" // [port] CHANGED: Added, [mhdr].
 #include <algorithm>
 
 using namespace llvm;
@@ -25,6 +28,20 @@ using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::COFF;
 using llvm::support::ulittle32_t;
+
+// [port] CHANGED: Added the whole declaration of class `MachOFileLayout`, [mhdr].
+namespace lld {
+namespace mach_o {
+namespace normalized {
+
+class MachOFileLayout {
+public:
+  MachOFileLayout(const NormalizedFile &file);
+  size_t headerAndLoadCommandsSize() const;
+};
+}
+}
+}
 
 namespace lld {
 namespace coff {
@@ -611,6 +628,27 @@ size_t MergeChunk::getSize() const {
 
 void MergeChunk::writeTo(uint8_t *Buf) const {
   Builder.write(Buf + OutputSectionOff);
+}
+
+// [port] CHANGED: Added implementation of class `MhdrChunk`, [mhdr].
+// See also `MachObjectWriter::writeObject` and `MachOFileLayout::MachOFileLayout`.
+void MhdrChunk::finalizeContents() {
+  using namespace lld::mach_o::normalized;
+
+  // Inspired by `llvm::mach_o::normalized::readBinary`.
+  
+  // Construct `NormalizedFile`.
+  std::unique_ptr<NormalizedFile> f(new NormalizedFile());
+  f->arch = MachOLinkingContext::Arch::arch_x86; // TODO: Dynamically select.
+
+  // Construct `MachOFileLayout` from the `NormalizedFile`.
+  MachOFileLayout layout(*f);
+
+  // Extract size of the header.
+  Size = layout.headerAndLoadCommandsSize();
+}
+void MhdrChunk::writeTo(uint8_t *Buf) const {
+
 }
 
 } // namespace coff

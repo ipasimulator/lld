@@ -284,8 +284,14 @@ private:
 // A chunk for Mach-O header (in `.mhdr` section).
 class MhdrChunk : public Chunk {
 public:
-  MhdrChunk() {}
-  size_t getSize() const override { return 4096; }
+  MhdrChunk(std::vector<OutputSection *> &OS) : OutputSections(OS) {}
+  size_t getSize() const override { return Size; }
+  void finalizeContents() override;
+  void writeTo(uint8_t *Buf) const override;
+
+private:
+  size_t Size = 0;
+  std::vector<OutputSection *> &OutputSections;
 };
 
 static const uint8_t ImportThunkX86[] = {
