@@ -21,6 +21,15 @@
 #include <utility>
 #include <vector>
 
+// [port] CHANGED: Added all the forward declarations in `lld::mach_o::normalized`, [mhdr].
+namespace lld {
+namespace mach_o {
+namespace normalized {
+struct NormalizedFile;
+}
+}
+}
+
 namespace lld {
 namespace coff {
 
@@ -285,6 +294,7 @@ private:
 class MhdrChunk : public Chunk {
 public:
   MhdrChunk(std::vector<OutputSection *> &OS) : OutputSections(OS) {}
+  ~MhdrChunk();
   size_t getSize() const override { return Size; }
   void finalizeContents() override;
   void writeTo(uint8_t *Buf) const override;
@@ -292,6 +302,7 @@ public:
 private:
   size_t Size = 0;
   std::vector<OutputSection *> &OutputSections;
+  mach_o::normalized::NormalizedFile *File;
 };
 
 static const uint8_t ImportThunkX86[] = {
