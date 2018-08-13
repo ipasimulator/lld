@@ -293,15 +293,18 @@ private:
 // A chunk for Mach-O header (in `.mhdr` section).
 class MhdrChunk : public Chunk {
 public:
-  MhdrChunk(std::vector<OutputSection *> &OS) : OutputSections(OS) {}
+  MhdrChunk() {}
   ~MhdrChunk();
+  void init(std::vector<OutputSection *> &OS) { OutputSections = &OS; }
   size_t getSize() const override { return Size; }
   void finalizeContents() override;
   void writeTo(uint8_t *Buf) const override;
 
+  static MhdrChunk *Instance;
+
 private:
   size_t Size = 0;
-  std::vector<OutputSection *> &OutputSections;
+  std::vector<OutputSection *> *OutputSections;
   mach_o::normalized::NormalizedFile *File;
 };
 

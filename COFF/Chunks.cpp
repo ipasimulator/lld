@@ -675,6 +675,7 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
   // Write Mach-O header and load commands using the `NormalizedFile` filled inside `finalizeContents`.
   lld::mach_o::normalized::writeHeaderAndLoadCommands(*File, Buf);
 }
+MhdrChunk *MhdrChunk::Instance;
 
 } // namespace coff
 } // namespace lld
