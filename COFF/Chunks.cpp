@@ -629,23 +629,51 @@ void MergeChunk::writeTo(uint8_t *Buf) const {
 }
 
 // [port] CHANGED: Added implementation of class `MhdrChunk`, [mhdr].
-// See also `MachObjectWriter::writeObject` and `MachOFileLayout::MachOFileLayout`.
+// See also `MachObjectWriter::writeObject` and
+// `MachOFileLayout::MachOFileLayout`.
 MhdrChunk::~MhdrChunk() { delete File; }
 void MhdrChunk::finalizeContents() {
   using namespace lld::mach_o::normalized;
 
   // Inspired by `llvm::mach_o::normalized::readBinary`.
-  
+
   // Fill `NormalizedFile`.
   File = new NormalizedFile();
   File->arch = MachOLinkingContext::Arch::arch_x86; // TODO: Dynamically select.
-  File->fileType = llvm::MachO::MH_EXECUTE; // TODO: Or MH_DYLIB.
+  File->fileType = llvm::MachO::MH_EXECUTE;         // TODO: Or MH_DYLIB.
+  // TODO: Fill File->flags.
+
+  // Add segments and sections. Every section in PE corresponds to one segment
+  // containing one section in Mach-O header for now.
+  // TODO: Not everything is copied here. Most importantly, no file offsets are
+  // given.
+  for (auto &&os : *OutputSections) {
+    Segment segment;
+    segment.name = os->Name;
+    segment.address = os->getRVA();
+    segment.size = os->getVirtualSize();
+    segment.init_access =
+        MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
+    segment.max_access = segment.init_access;
+
+    Section section;
+    section.segmentName = os->Name;
+    section.sectionName = os->Name;
+    //section.alignment = 4096; // TODO: Just a guess.
+    section.address = os->getRVA();
+    // TODO: We can't really now size of the section right now.
+    section.content = ArrayRef<uint8_t>(nullptr, 4096);
+
+    File->segments.push_back(segment);
+    File->sections.push_back(section);
+  }
 
   // Compute size of the header.
   Size = headerAndLoadCommandsSize(*File);
 }
 void MhdrChunk::writeTo(uint8_t *Buf) const {
-  // Write Mach-O header and load commands using the `NormalizedFile` filled inside `finalizeContents`.
+  // Write Mach-O header and load commands using the `NormalizedFile` filled
+  // inside `finalizeContents`.
   lld::mach_o::normalized::writeHeaderAndLoadCommands(*File, Buf);
 }
 MhdrChunk *MhdrChunk::Instance;
