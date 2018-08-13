@@ -10,6 +10,7 @@
 #include "Chunks.h"
 #include "InputFiles.h"
 #include "Symbols.h"
+#include "SymbolTable.h" // [port] CHANGED: Added, [mhdr].
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h" // [port] CHANGED: Added, [mhdr].
@@ -689,8 +690,29 @@ void MhdrChunk::finalizeContents() {
     section.address = os->getRVA();
     section.content = ArrayRef<uint8_t>(nullptr, 4096);
 
-    File->segments.push_back(segment);
-    File->sections.push_back(section);
+    File->segments.push_back(std::move(segment));
+    File->sections.push_back(std::move(section));
+  }
+
+  // Add dependent libraries.
+  {
+    std::vector<StringRef> dlls;
+    Symtab->forEachSymbol([&](Symbol *s) {
+      if (auto imp = dyn_cast<DefinedImportData>(s)) {
+        dlls.push_back(imp->getDLLName());
+      }
+    });
+    std::sort(dlls.begin(), dlls.end());
+    dlls.erase(std::unique(dlls.begin(), dlls.end()), dlls.end());
+    for (auto &&dll : dlls) {
+      DependentDylib dylib;
+      dylib.path = dll;
+      dylib.kind = MachO::LC_LOAD_DYLIB;
+      dylib.compatVersion = 0;
+      dylib.currentVersion = 0;
+
+      File->dependentDylibs.push_back(std::move(dylib));
+    }
   }
 
   // Compute size of the header.
@@ -710,7 +732,7 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
 
   // Fix things we know now but cannot be specified in `NormalizedFile` (i.e.,
   // we have to fix them manually in the buffer).
-  auto header = reinterpret_cast<MachO::mach_header *>(Buf);
+  //auto header = reinterpret_cast<MachO::mach_header *>(Buf);
   // TODO: Fix file offsets.
 }
 MhdrChunk *MhdrChunk::Instance;
