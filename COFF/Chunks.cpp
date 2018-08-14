@@ -675,22 +675,39 @@ void MhdrChunk::finalizeContents() {
   // containing one section in Mach-O header for now. Note that not everything
   // is filled here. For example, we don't even know section sizes yet. Those
   // things are filled later in function `MhdrChunk::writeTo`.
+
+  // By convention (see `getsectiondata` in `libobjc` and also some normal
+  // `.dylib`s), the segment `__TEXT` should start at the Mach-O header
+  // (although there is no section for it).
+  Segment textSeg;
+  textSeg.name = "__TEXT";
+  textSeg.init_access =
+      MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
+  textSeg.max_access = textSeg.init_access;
+
   for (auto &&os : *OutputSections) {
-    Segment segment;
-    segment.name = os->Name;
-    segment.address = os->getRVA();
-    segment.size = 4096;
-    segment.init_access =
-        MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
-    segment.max_access = segment.init_access;
+    StringRef segName;
+    if (os->Name == ".mhdr") {
+      textSeg.address = os->getRVA();
+      segName = textSeg.name;
+      File->segments.push_back(std::move(textSeg));
+    } else {
+      Segment segment;
+      segment.name = os->Name;
+      segment.address = os->getRVA();
+      segment.size = 4096;
+      segment.init_access =
+          MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
+      segment.max_access = segment.init_access;
+      File->segments.push_back(std::move(segment));
+      segName = segment.name;
+    }
 
     Section section;
-    section.segmentName = os->Name;
+    section.segmentName = segName;
     section.sectionName = os->Name;
     section.address = os->getRVA();
     section.content = ArrayRef<uint8_t>(nullptr, 4096);
-
-    File->segments.push_back(std::move(segment));
     File->sections.push_back(std::move(section));
   }
 
