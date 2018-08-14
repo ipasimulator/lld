@@ -633,6 +633,13 @@ void MergeChunk::writeTo(uint8_t *Buf) const {
 // See also `MachObjectWriter::writeObject` and
 // `MachOFileLayout::MachOFileLayout`.
 MhdrChunk::~MhdrChunk() { delete File; }
+StringRef translateSectionName(StringRef name) {
+  if (name.startswith(".")) {
+    // TODO: How to allocate new string correctly in LLVM?
+    return *make<std::string>(("__" + name.substr(1)).str());
+  }
+  return name;
+}
 void MhdrChunk::finalizeContents() {
   using namespace lld::mach_o::normalized;
 
@@ -689,7 +696,7 @@ void MhdrChunk::finalizeContents() {
 
     Section section;
     section.segmentName = segName;
-    section.sectionName = os->Name;
+    section.sectionName = translateSectionName(os->Name);
     section.address = rva;
     section.content = ArrayRef<uint8_t>(nullptr, 4096);
     File->sections.push_back(std::move(section));
@@ -748,7 +755,7 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
     // reordered since the time we built `File->sections`).
     bool sectionFound = false;
     for (auto &&sec : File->sections) {
-      if (sec.sectionName == os->Name) {
+      if (sec.sectionName == translateSectionName(os->Name)) {
         sec.address = os->getRVA();
         sec.content = ArrayRef<uint8_t>(nullptr, os->getVirtualSize());
         sectionFound = true;
@@ -766,7 +773,7 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
   for (auto &&sec : File->sections) {
     bool sectionFound = false;
     for (auto &&os : *OutputSections) {
-      if (os->Name == sec.sectionName) {
+      if (translateSectionName(os->Name) == sec.sectionName) {
         sectionFound = true;
         break;
       }
