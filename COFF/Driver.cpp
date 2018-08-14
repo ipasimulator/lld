@@ -1442,9 +1442,15 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Symtab->addAbsolute(mangle("__enclave_config"), 0);
 
   // [port] CHANGED: Added, [mhdr].
-  MhdrChunk::Instance = make<MhdrChunk>();
-  Symtab->addSynthetic(mangle("_mh_dylib_header"),
-                       MhdrChunk::Instance); // TODO: Or `_mh_execute_header`.
+  {
+    // Define symbol pointing to the beginning of our `.mhdr` section.
+    MhdrChunk::Instance = make<MhdrChunk>();
+    Symtab->addSynthetic(mangle("_mh_dylib_header"),
+                         MhdrChunk::Instance); // TODO: Or `_mh_execute_header`.
+
+    // Export that symbol.
+    Config->Exports.push_back(parseExport(mangle("_mh_dylib_header")));
+  }
 
   // This code may add new undefined symbols to the link, which may enqueue more
   // symbol resolution tasks, so we need to continue executing tasks until we
