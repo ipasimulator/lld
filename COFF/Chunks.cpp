@@ -641,48 +641,63 @@ void MhdrChunk::finalizeContents() {
   // Fill `NormalizedFile`.
   File = new NormalizedFile();
   File->arch = MachOLinkingContext::Arch::arch_x86; // TODO: Dynamically select.
-  File->fileType = MachO::MH_EXECUTE;         // TODO: Or MH_DYLIB.
+  File->fileType = MachO::MH_EXECUTE;               // TODO: Or MH_DYLIB.
   // TODO: Fill File->flags.
+  File->pageSize = 4096;
 
   // Add segments and sections. Every section in PE corresponds to one segment
   // containing one section in Mach-O header for now. Note that not everything
   // is filled here. For example, we don't even know section sizes yet. Those
   // things are filled later in function `MhdrChunk::writeTo`.
+  // TODO: Propagate segment info from compilation.
 
   // By convention (see `getsectiondata` in `libobjc` and also some normal
   // `.dylib`s), the segment `__TEXT` should start at the Mach-O header
   // (although there is no section for it).
   Segment textSeg;
   textSeg.name = "__TEXT";
+  textSeg.address = 0;
+  textSeg.size = 4096;
   textSeg.init_access =
       MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
   textSeg.max_access = textSeg.init_access;
 
+  // Everything else is searched in segment `__DATA` (see `getDataSection` in
+  // `libobjc`). So, for simplicity, we put everything else into that segment
+  // (even code) for now.
+  Segment dataSeg;
+  dataSeg.name = "__DATA";
+  dataSeg.address = 4096;
+  dataSeg.init_access =
+      MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
+  dataSeg.max_access = dataSeg.init_access;
+  uint64_t dataSize = 0;
+
+  uint64_t dataRva = 4096;
   for (auto &&os : *OutputSections) {
     StringRef segName;
+    uint64_t rva;
     if (os->Name == ".mhdr") {
-      textSeg.address = os->getRVA();
       segName = textSeg.name;
-      File->segments.push_back(std::move(textSeg));
+      rva = 0;
     } else {
-      Segment segment;
-      segment.name = os->Name;
-      segment.address = os->getRVA();
-      segment.size = 4096;
-      segment.init_access =
-          MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
-      segment.max_access = segment.init_access;
-      File->segments.push_back(std::move(segment));
-      segName = segment.name;
+      dataSize += 4096;
+      segName = dataSeg.name;
+      rva = dataRva;
+      dataRva += 4096;
     }
 
     Section section;
     section.segmentName = segName;
     section.sectionName = os->Name;
-    section.address = os->getRVA();
+    section.address = rva;
     section.content = ArrayRef<uint8_t>(nullptr, 4096);
     File->sections.push_back(std::move(section));
   }
+
+  dataSeg.size = dataSize;
+  File->segments.push_back(std::move(textSeg));
+  File->segments.push_back(std::move(dataSeg));
 
   // Add dependent libraries.
   {
@@ -709,12 +724,58 @@ void MhdrChunk::finalizeContents() {
   Size = headerAndLoadCommandsSize(*File);
 }
 void MhdrChunk::writeTo(uint8_t *Buf) const {
+  using namespace lld::mach_o::normalized;
+
   // Fix some things inside `NormalizedFile` we know now.
-  size_t i = 0;
+
+  // Fix section RVAs and sizes.
+  uint64_t dataRva = std::numeric_limits<uint64_t>::max();
+  uint64_t dataLastRva = 0;
+  uint64_t dataLastSize = 0;
   for (auto &&os : *OutputSections) {
-    File->segments[i].size = os->getVirtualSize();
-    File->sections[i].content = ArrayRef<uint8_t>(nullptr, os->getRawSize());
+    if (os->Name == ".mhdr") {
+      File->segments[0].size = os->getVirtualSize(); // __TEXT
+      File->segments[0].address = os->getRVA();
+    } else {
+      dataRva = std::min(dataRva, os->getRVA());
+      if (os->getRVA() > dataLastRva) {
+        dataLastRva = os->getRVA();
+        dataLastSize = os->getVirtualSize();
+      }
+    }
+
+    // Find the corresponding section (note that `OutputSections` were probably
+    // reordered since the time we built `File->sections`).
+    bool sectionFound = false;
+    for (auto &&sec : File->sections) {
+      if (sec.sectionName == os->Name) {
+        sec.address = os->getRVA();
+        sec.content = ArrayRef<uint8_t>(nullptr, os->getVirtualSize());
+        sectionFound = true;
+        break;
+      }
+    }
+    assert(sectionFound);
   }
+  File->segments[1].size = dataLastRva + dataLastSize; // __DATA
+  File->segments[1].address = dataRva;
+
+  // Remove old sections.
+  std::vector<Section> newSections;
+  newSections.reserve(OutputSections->size());
+  for (auto &&sec : File->sections) {
+    bool sectionFound = false;
+    for (auto &&os : *OutputSections) {
+      if (os->Name == sec.sectionName) {
+        sectionFound = true;
+        break;
+      }
+    }
+    if (sectionFound) {
+      newSections.push_back(std::move(sec));
+    }
+  }
+  File->sections = std::move(newSections);
 
   // Write Mach-O header and load commands using the `NormalizedFile` filled
   // inside `finalizeContents`.
@@ -722,7 +783,7 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
 
   // Fix things we know now but cannot be specified in `NormalizedFile` (i.e.,
   // we have to fix them manually in the buffer).
-  //auto header = reinterpret_cast<MachO::mach_header *>(Buf);
+  // auto header = reinterpret_cast<MachO::mach_header *>(Buf);
   // TODO: Fix file offsets.
 }
 MhdrChunk *MhdrChunk::Instance;
