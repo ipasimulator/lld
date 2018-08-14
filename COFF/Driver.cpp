@@ -1358,8 +1358,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Symtab->addSynthetic(mangle("_mh_dylib_header"),
                          MhdrChunk::Instance); // TODO: Or `_mh_execute_header`.
 
-    // Export that symbol.
-    Config->Exports.push_back(parseExport(mangle("_mh_dylib_header")));
+    // Export that symbol. But make it `Private`, so that it's not added to the
+    // import library.
+    Export E = parseExport(mangle("_mh_dylib_header"));
+    E.Private = true;
+    Config->Exports.push_back(std::move(E));
   }
 
   // This code may add new undefined symbols to the link, which may enqueue more
