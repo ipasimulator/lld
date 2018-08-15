@@ -59,6 +59,14 @@ void SymbolTable::addFile(InputFile *File) {
   Driver->parseDirectives(S);
 }
 
+// [port] CHANGED: Added this function.
+static void errorOrWarnMultiple(const Twine &S) {
+  if (Config->ForceMultiple)
+    warn(S);
+  else
+    error(S);
+}
+
 static void errorOrWarn(const Twine &S) {
   if (Config->Force)
     warn(S);
@@ -253,7 +261,9 @@ void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol Sym) {
 }
 
 void SymbolTable::reportDuplicate(Symbol *Existing, InputFile *NewFile) {
-  error("duplicate symbol: " + toString(*Existing) + " in " +
+  // [port] CHANGED: Used `errorOrWarnMultiple` instead of `error`.
+  // [port] TODO: Is this a correct way to implement `/force:multiple`?
+  errorOrWarnMultiple("duplicate symbol: " + toString(*Existing) + " in " +
         toString(Existing->getFile()) + " and in " + toString(NewFile));
 }
 
