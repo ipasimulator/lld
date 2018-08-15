@@ -90,6 +90,11 @@ def swaprun_net : F<"swaprun:net">;
 def verbose : F<"verbose">;
 def wholearchive_flag : F<"wholearchive">;
 
+// [port] CHANGED: Added those two definitions.
+// This adds support for `/winmd:no /winmdfile:...` combo, which has no effect anyway, so why not.
+def winmd_no : F<"winmd:no">;
+def winmdfile : P<"winmdfile", "Currently not supported">;
+
 def force : F<"force">,
     HelpText<"Allow undefined symbols when creating executables">;
 def force_unresolved : F<"force:unresolved">;
