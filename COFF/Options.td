@@ -86,6 +86,8 @@ def deffile : Joined<["/", "-"], "def:">,
 
 def debug : F<"debug">, HelpText<"Embed a symbol table in the image">;
 def debug_full : F<"debug:full">, Alias<debug>;
+// [port] CHANGED: Added to support option `/debug:fastlink`.
+def debug_fastlink : F<"debug:fastlink">, Alias<debug>;
 def debugtype : P<"debugtype", "Debug Info Options">;
 def dll : F<"dll">, HelpText<"Create a DLL">;
 def driver : P<"driver", "Generate a Windows NT Kernel Mode Driver">;
