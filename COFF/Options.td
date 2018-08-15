@@ -98,6 +98,8 @@ def winmdfile : P<"winmdfile", "Currently not supported">;
 def force : F<"force">,
     HelpText<"Allow undefined symbols when creating executables">;
 def force_unresolved : F<"force:unresolved">;
+// [port] CHANGED: Added to support option `/force:multiple`.
+def force_multiple : F<"force:multiple">;
 defm WX : B<"WX", "Treat warnings as errors", "Don't treat warnings as errors">;
 
 defm allowbind : B<"allowbind", "Enable DLL binding (default)",

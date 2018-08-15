@@ -94,6 +94,8 @@ struct Configuration {
   bool DoICF = true;
   bool Relocatable = true;
   bool Force = false;
+  // [port] CHANGED: Added to support option `/force:multiple`.
+  bool ForceMultiple = false;
   bool Debug = false;
   bool DebugDwarf = false;
   bool DebugGHashes = false;
