@@ -95,6 +95,10 @@ def wholearchive_flag : F<"wholearchive">;
 def winmd_no : F<"winmd:no">;
 def winmdfile : P<"winmdfile", "Currently not supported">;
 
+// [port] CHANGED: Added this definition to support option `/winmd:only`, although it's not actually implemented.
+// [port] TODO: Implement or remove.
+def winmd_only : F<"winmd:only">;
+
 def force : F<"force">,
     HelpText<"Allow undefined symbols when creating executables">;
 def force_unresolved : F<"force:unresolved">;
