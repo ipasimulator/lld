@@ -786,7 +786,9 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
 
   // Write Mach-O header and load commands using the `NormalizedFile` filled
   // inside `finalizeContents`.
-  lld::mach_o::normalized::writeHeaderAndLoadCommands(*File, Buf);
+  if (llvm::Error E = lld::mach_o::normalized::writeHeaderAndLoadCommands(*File, Buf)) {
+    error("constructing Mach-O header failed: " + llvm::toString(std::move(E)));
+  }
 
   // Fix things we know now but cannot be specified in `NormalizedFile` (i.e.,
   // we have to fix them manually in the buffer).
