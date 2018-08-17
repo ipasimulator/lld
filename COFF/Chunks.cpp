@@ -336,6 +336,16 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
     if (!Sym) {
       if (isCodeView() || isDWARF())
         continue;
+
+      // [port] CHANGED: Added this `if`, [fixbind].
+      // Ignore discarded symbols inside section `.fixbind`, just set them to
+      // NULL.
+      // [port] TODO: Also remove them from the file entirely.
+      if (getSectionName() == ".fixbind") {
+        *(uint32_t *)Off = 0;
+        continue;
+      }
+
       // Symbols in early discarded sections are represented using null pointers,
       // so we need to retrieve the name from the object file.
       COFFSymbolRef Sym =
