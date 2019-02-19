@@ -1263,6 +1263,10 @@ void Util::addDependentDylibs(const lld::File &atomFile,
 }
 
 int Util::dylibOrdinal(const SharedLibraryAtom *sa) {
+  // [port] CHANGED: Added this `if`. See #21.
+  if (!sa)
+    return 0;
+
   return _dylibInfo[sa->loadName()].ordinal;
 }
 

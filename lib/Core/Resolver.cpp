@@ -422,6 +422,10 @@ bool Resolver::checkUndefines() {
     if (_symbolTable.isCoalescedAway(undef))
       continue;
 
+    // [port] CHANGED: Added this `if`. See #21.
+    if (undef->name() == "dyld_stub_binder")
+      continue;
+
     // Seems like this symbol is undefined. Warn that.
     foundUndefines = true;
     if (_ctx.printRemainingUndefines()) {
