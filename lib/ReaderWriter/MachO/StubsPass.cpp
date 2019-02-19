@@ -276,9 +276,10 @@ public:
         [&](const SharedLibraryAtom *atom) {
           return atom->name().equals(_stubInfo.binderSymbolName);
         });
-    assert(I != mergedFile.sharedLibrary().end() &&
-           "dyld_stub_binder not found");
-    addReference(helperBinderNLPAtom, _stubInfo.nonLazyPointerReferenceToBinder, *I);
+    // [port] CHANGED: `assert` -> `if`. See #21.
+    if (I != mergedFile.sharedLibrary().end())
+      addReference(helperBinderNLPAtom,
+                   _stubInfo.nonLazyPointerReferenceToBinder, *I);
 
     // Sort targets by name, so stubs and lazy pointers are consistent
     std::vector<const Atom *> targetsNeedingStubs;
