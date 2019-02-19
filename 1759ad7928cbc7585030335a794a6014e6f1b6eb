@@ -1,0 +1,17 @@
+[ver:1,total:5820]
+tools/lld/lld.cpp:2340,1550520000:1080,1550523600:720,1550527200:540,r
+lib/Core/Resolver.cpp:550,1550516400:210,1550520000:250,1550570400:90,m
+lib/ReaderWriter/MachO/MachONormalizedFileFromAtoms.cpp:535,1550520000:385,1550570400:150,m
+lib/ReaderWriter/MachO/WriterMachO.cpp:530,1536930000:80,1536933600:450,r
+lib/Driver/DarwinLdDriver.cpp:385,1535986800:60,1536940800:150,1550516400:30,1550520000:145,r
+../../.git/modules/deps/lld/hooks/post-commit:360,1535306400:180,1535742000:180,r
+lib/Core/File.cpp:240,1535986800:240,r
+CMakeLists.txt:180,1550394000:180,r
+include/lld/Common/Driver.h:180,1550523600:180,r
+include/lld/Core/File.h:180,1535990400:180,r
+lib/ReaderWriter/MachO/ExecutableAtoms.h:165,1536930000:45,1536933600:120,r
+lib/ReaderWriter/MachO/ArchHandler_x86.cpp:75,1536930000:45,1536933600:30,r
+lib/ReaderWriter/MachO/StubsPass.cpp:55,1536930000:55,r
+lib/ReaderWriter/MachO/MachONormalizedFileBinaryReader.cpp:15,1536940800:15,r
+include/lld/ReaderWriter/MachOLinkingContext.h:15,1536940800:15,r
+lib/ReaderWriter/MachO/ArchHandler_arm.cpp:15,1536930000:15,r
