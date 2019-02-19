@@ -1,0 +1,11 @@
+[ver:1,total:1740]
+lib/ReaderWriter/MachO/StubsPass.cpp:1105,1550574000:445,1550577600:660,m
+lib/ReaderWriter/MachO/MachONormalizedFileBinaryWriter.cpp:180,1550574000:180,r
+lib/ReaderWriter/MachO/MachONormalizedFileFromAtoms.cpp:180,1550570400:180,r
+lib/Driver/DarwinLdDriver.cpp:135,1550574000:135,r
+lib/Core/LinkingContext.cpp:45,1550574000:45,r
+lib/ReaderWriter/MachO/MachOLinkingContext.cpp:30,1550574000:30,r
+include/lld/Core/File.h:20,1550574000:20,r
+include/lld/Core/Simple.h:15,1550574000:15,r
+include/lld/Core/PassManager.h:15,1550574000:15,r
+lib/ReaderWriter/MachO/WriterMachO.cpp:15,1550574000:15,r
