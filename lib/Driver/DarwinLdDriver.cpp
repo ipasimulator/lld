@@ -698,6 +698,12 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx) {
     ctx.addExportSymbol(symbol->getValue());
   }
 
+  // [port] CHANGED: Added this `for`. See #23.
+  // Handle -reexport_library <library>
+  for (auto library : parsedArgs.filtered(OPT_reexport_library)) {
+    ctx.addReexportedLibrary(library->getValue());
+  }
+
   // Handle obosolete -multi_module and -single_module
   if (llvm::opt::Arg *mod =
           parsedArgs.getLastArg(OPT_multi_module, OPT_single_module)) {

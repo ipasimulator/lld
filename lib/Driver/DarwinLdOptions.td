@@ -70,6 +70,10 @@ def unexported_symbols_list : Separate<["-"], "unexported_symbols_list">,
 def unexported_symbol : Separate<["-"], "unexported_symbol">,
      MetaVarName<"<symbol>">,
      HelpText<"A symbol which should not be exported">, Group<grp_opts>;
+// [port] CHANGED: Added this `def`. See #23.
+def reexport_library : Separate<["-"], "reexport_library">,
+     MetaVarName<"<library>">,
+     HelpText<"Library whose symbols will be re-exported">, Group<grp_opts>;
 def keep_private_externs : Flag<["-"], "keep_private_externs">,
      HelpText<"Private extern (hidden) symbols should not be transformed "
               "into local symbols">, Group<grp_opts>;
