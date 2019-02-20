@@ -1260,6 +1260,16 @@ void Util::addDependentDylibs(const lld::File &atomFile,
     else if (_ctx.isUpwardDylib(dep.path))
       dep.kind = llvm::MachO::LC_LOAD_UPWARD_DYLIB;
   }
+  // [port] CHANGED: Added this block of code. See #23.
+  // Add re-exported libraries.
+  for (const std::string *lib : _ctx.reexportedLibraries()) {
+    DependentDylib depInfo;
+    depInfo.path = *lib;
+    depInfo.kind = llvm::MachO::LC_REEXPORT_DYLIB;
+    depInfo.currentVersion = _ctx.dylibCurrentVersion(*lib);
+    depInfo.compatVersion = _ctx.dylibCompatVersion(*lib);
+    nFile.dependentDylibs.push_back(depInfo);
+  }
 }
 
 int Util::dylibOrdinal(const SharedLibraryAtom *sa) {

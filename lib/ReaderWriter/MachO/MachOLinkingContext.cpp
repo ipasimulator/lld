@@ -862,7 +862,7 @@ bool MachOLinkingContext::exportSymbolNamed(StringRef sym) const {
 }
 
 // [port] CHANGED: Added this method. See #23.
-void MachOLinkingContext::addReexportedLibrary(StringRef lib) {
+void MachOLinkingContext::addReexportedLibrary(std::string *lib) {
   _reexportedLibraries.insert(lib);
 }
 
