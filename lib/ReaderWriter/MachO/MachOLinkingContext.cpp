@@ -863,6 +863,11 @@ bool MachOLinkingContext::exportSymbolNamed(StringRef sym) const {
   llvm_unreachable("_exportMode unknown enum value");
 }
 
+// [port] CHANGED: Added this method. See #23.
+void MachOLinkingContext::addReexportedLibrary(StringRef lib) {
+  _reexportedLibraries.insert(lib);
+}
+
 std::string MachOLinkingContext::demangle(StringRef symbolName) const {
   // Only try to demangle symbols if -demangle on command line
   if (!demangleSymbols())

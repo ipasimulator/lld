@@ -131,6 +131,9 @@ public:
   bool exportRestrictMode() const { return _exportMode != ExportMode::globals; }
   bool exportSymbolNamed(StringRef sym) const;
 
+  // [port] CHANGED: Added this method. See #23.
+  void addReexportedLibrary(StringRef lib);
+
   DebugInfoMode debugInfoMode() const { return _debugInfoMode; }
   void setDebugInfoMode(DebugInfoMode mode) {
     _debugInfoMode = mode;
@@ -495,6 +498,8 @@ private:
   mutable std::mutex _dylibsMutex;
   ExportMode _exportMode = ExportMode::globals;
   llvm::StringSet<> _exportedSymbols;
+  // [port] CHANGED: Added this field. See #23.
+  llvm::StringSet<> _reexportedLibraries;
   DebugInfoMode _debugInfoMode = DebugInfoMode::addDebugMap;
   std::unique_ptr<llvm::raw_fd_ostream> _dependencyInfo;
   llvm::StringMap<std::vector<OrderFileNode>> _orderFiles;
