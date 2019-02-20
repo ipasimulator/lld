@@ -1,0 +1,10 @@
+[ver:1,total:4260]
+lib/ReaderWriter/MachO/MachONormalizedFileFromAtoms.cpp:1420,1550664000:800,1550667600:620,m
+lib/Driver/DarwinLdDriver.cpp:1025,1550664000:560,1550667600:465,m
+lib/ReaderWriter/MachO/MachONormalizedFileBinaryWriter.cpp:650,1550664000:70,1550667600:580,r
+include/lld/ReaderWriter/MachOLinkingContext.h:505,1550664000:170,1550667600:335,m
+lib/ReaderWriter/MachO/MachOLinkingContext.cpp:485,1550664000:175,1550667600:310,m
+lib/ReaderWriter/MachO/WriterMachO.cpp:90,1550664000:50,1550667600:40,r
+lib/ReaderWriter/MachO/MachONormalizedFileToAtoms.cpp:50,1550667600:50,r
+lib/Core/LinkingContext.cpp:20,1550664000:20,r
+lib/ReaderWriter/MachO/MachONormalizedFile.h:15,1550664000:15,r
