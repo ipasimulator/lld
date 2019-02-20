@@ -711,7 +711,9 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx,
   // [port] CHANGED: Added this `for`. See #23.
   // Handle -reexport_library <library>
   for (auto library : parsedArgs.filtered(OPT_reexport_library)) {
-    ctx.addReexportedLibrary(library->getValue());
+    // TODO: This is a memory leak of the `string`, but otherwise, it gets
+    // destroyed too early.
+    ctx.addReexportedLibrary(new std::string(library->getValue()));
   }
 
   // Handle obosolete -multi_module and -single_module
