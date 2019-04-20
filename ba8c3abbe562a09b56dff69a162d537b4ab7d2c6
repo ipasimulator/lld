@@ -1,0 +1,4 @@
+[ver:1,total:3240]
+COFF/Chunks.cpp:2850,1555750800:2190,1555754400:660,m
+lib/ReaderWriter/MachO/MachONormalizedFileBinaryWriter.cpp:360,1555754400:360,m
+lib/ReaderWriter/MachO/MachONormalizedFile.h:30,1555750800:30,r
