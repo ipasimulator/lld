@@ -671,10 +671,16 @@ void MergeChunk::writeTo(uint8_t *Buf) const {
 // `MachOFileLayout::MachOFileLayout`.
 MhdrChunk::~MhdrChunk() { delete File; }
 StringRef translateSectionName(StringRef Name) {
-  if (Name.startswith(".")) {
-    // TODO: How to allocate new string correctly in LLVM?
+  // We don't translate all `.`-prefixed sections, since there can be section
+  // `.data` and `__data`, for example, and this translation would lead to
+  // duplicate sections.
+  // TODO: How to allocate new string correctly in LLVM?
+  if (Name.equals(".mhdr") || Name.startswith(".objc_"))
     return *make<std::string>(("__" + Name.substr(1)).str());
-  }
+  if (Name.startswith("."))
+    // HACK: For some weird reason, this removes `$*` postfixes, which is
+    // actually what we want to do here (and in the `if` above, as well).
+    return *make<std::string>(Name.str());
   return Name;
 }
 void MhdrChunk::finalizeContents() {
