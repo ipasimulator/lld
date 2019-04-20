@@ -789,7 +789,7 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
       TextOffset = OS->getFileOff();
       TextSize = OS->getRawSize();
       TextSegment.size = OS->getVirtualSize();
-      TextSegment.address = OS->getRVA();
+      TextSegment.address = OS->getRVA() + ImageBase;
     } else {
       DataRVA = std::min(DataRVA, OS->getRVA());
       if (OS->getRVA() > DataLastRVA) {
@@ -808,7 +808,7 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
     bool SectionFound = false;
     for (Section &Sec : File->sections) {
       if (Sec.sectionName == translateSectionName(OS->Name)) {
-        Sec.address = OS->getRVA();
+        Sec.address = OS->getRVA() + ImageBase;
         // TODO: There is a clash since sections in Mach-O files have only one
         // size.
         Sec.content = ArrayRef<uint8_t>(
@@ -820,7 +820,7 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
     assert(SectionFound);
   }
   DataSegment.size = DataLastRVA - DataRVA + DataLastVirtSize;
-  DataSegment.address = DataRVA;
+  DataSegment.address = DataRVA + ImageBase;
 
   // Remove old sections.
   std::vector<Section> NewSections;

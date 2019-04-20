@@ -1450,7 +1450,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // [port] CHANGED: Added, [mhdr].
   {
     // Define symbol pointing to the beginning of our `.mhdr` section.
-    MhdrChunk::Instance = make<MhdrChunk>();
+    MhdrChunk::Instance = make<MhdrChunk>(Config->ImageBase);
     Symtab->addSynthetic(mangle("_mh_dylib_header"),
                          MhdrChunk::Instance); // TODO: Or `_mh_execute_header`.
 
