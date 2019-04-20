@@ -781,22 +781,26 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
   Segment &TextSegment = File->segments[0];
   Segment &DataSegment = File->segments[1];
   uint64_t DataRVA = std::numeric_limits<uint64_t>::max();
-  uint64_t DataLastRVA = 0;
-  uint64_t DataLastSize = 0;
-  uint64_t TextOffset = 0;
-  uint64_t DataOffset = 0;
+  uint64_t DataOffset = std::numeric_limits<uint64_t>::max();
+  uint64_t DataLastRVA = 0, DataLastVirtSize = 0, DataLastOffset = 0,
+           DataLastSize = 0, TextOffset = 0, TextSize = 0;
   for (OutputSection *OS : *OutputSections) {
     if (OS->Name == ".mhdr") {
+      TextOffset = OS->getFileOff();
+      TextSize = OS->getRawSize();
       TextSegment.size = OS->getVirtualSize();
       TextSegment.address = OS->getRVA();
-      TextOffset = OS->getFileOff();
     } else {
       DataRVA = std::min(DataRVA, OS->getRVA());
       if (OS->getRVA() > DataLastRVA) {
         DataLastRVA = OS->getRVA();
-        DataLastSize = OS->getVirtualSize();
+        DataLastVirtSize = OS->getVirtualSize();
       }
-      DataOffset = std::min(TextOffset, OS->getFileOff());
+      DataOffset = std::min(DataOffset, OS->getFileOff());
+      if (OS->getFileOff() > DataLastOffset) {
+        DataLastOffset = OS->getFileOff();
+        DataLastSize = OS->getRawSize();
+      }
     }
 
     // Find the corresponding section (note that `OutputSections` were probably
@@ -805,14 +809,17 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
     for (Section &Sec : File->sections) {
       if (Sec.sectionName == translateSectionName(OS->Name)) {
         Sec.address = OS->getRVA();
-        Sec.content = ArrayRef<uint8_t>(nullptr, OS->getVirtualSize());
+        // TODO: There is a clash since sections in Mach-O files have only one
+        // size.
+        Sec.content = ArrayRef<uint8_t>(
+            nullptr, std::min(OS->getVirtualSize(), OS->getRawSize()));
         SectionFound = true;
         break;
       }
     }
     assert(SectionFound);
   }
-  DataSegment.size = DataLastRVA + DataLastSize;
+  DataSegment.size = DataLastRVA - DataRVA + DataLastVirtSize;
   DataSegment.address = DataRVA;
 
   // Remove old sections.
@@ -845,13 +852,15 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
   auto *Cmd = reinterpret_cast<MachO::load_command *>(Header + 1);
   for (size_t I = 0, IEnd = Header->ncmds; I != IEnd; ++I) {
     if (Cmd->cmd == MachO::LC_SEGMENT) {
-      // Fix segment's file offset.
+      // Fix segment's file offset and file size.
       auto *Seg = reinterpret_cast<MachO::segment_command *>(Cmd);
-      if (!strncmp(Seg->segname, "__TEXT", 16))
-        Seg->fileoff = TextOffset;
-      else if (!strncmp(Seg->segname, "__DATA", 16))
-        Seg->fileoff = DataOffset;
-      else
+      if (!strncmp(Seg->segname, "__TEXT", 16)) {
+        Seg->fileoff = 0;
+        Seg->filesize = TextSize;
+      } else if (!strncmp(Seg->segname, "__DATA", 16)) {
+        Seg->fileoff = DataOffset - TextOffset;
+        Seg->filesize = DataLastOffset - DataOffset + DataLastSize;
+      } else
         llvm_unreachable("Unexpected segment.");
 
       for (auto *Sect = reinterpret_cast<MachO::section *>(Seg + 1),
@@ -868,7 +877,7 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
         }
 
         // Fix section's file offset.
-        Sect->offset = OutputSect->getFileOff();
+        Sect->offset = OutputSect->getFileOff() - TextOffset;
       }
     }
 

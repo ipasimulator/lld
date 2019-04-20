@@ -1552,6 +1552,10 @@ llvm::Error writeBinary(const NormalizedFile &file, StringRef path) {
 
 // [port] CHANGED: Added the whole function, [mhdr].
 llvm::Error MachOFileLayout::writeHeaderAndLoadCommands(uint8_t *buffer) {
+  // Check for pending error from constructor.
+  if (_ec)
+    return llvm::errorCodeToError(_ec);
+
   _buffer = buffer;
   writeMachHeader();
   return writeLoadCommands();
