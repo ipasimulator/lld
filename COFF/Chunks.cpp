@@ -747,9 +747,8 @@ void MhdrChunk::finalizeContents() {
   {
     std::vector<StringRef> DLLs;
     Symtab->forEachSymbol([&](Symbol *s) {
-      if (auto Imp = dyn_cast<DefinedImportData>(s)) {
+      if (auto *Imp = dyn_cast<DefinedImportData>(s))
         DLLs.push_back(Imp->getDLLName());
-      }
     });
     std::sort(DLLs.begin(), DLLs.end());
     DLLs.erase(std::unique(DLLs.begin(), DLLs.end()), DLLs.end());
@@ -773,25 +772,31 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
   // Fix some things inside `NormalizedFile` we know now.
 
   // Fix section RVAs and sizes.
+  Segment &TextSegment = File->segments[0];
+  Segment &DataSegment = File->segments[1];
   uint64_t DataRVA = std::numeric_limits<uint64_t>::max();
   uint64_t DataLastRVA = 0;
   uint64_t DataLastSize = 0;
+  uint64_t TextOffset = 0;
+  uint64_t DataOffset = 0;
   for (OutputSection *OS : *OutputSections) {
     if (OS->Name == ".mhdr") {
-      File->segments[0].size = OS->getVirtualSize(); // __TEXT segment
-      File->segments[0].address = OS->getRVA();
+      TextSegment.size = OS->getVirtualSize();
+      TextSegment.address = OS->getRVA();
+      TextOffset = OS->getFileOff();
     } else {
       DataRVA = std::min(DataRVA, OS->getRVA());
       if (OS->getRVA() > DataLastRVA) {
         DataLastRVA = OS->getRVA();
         DataLastSize = OS->getVirtualSize();
       }
+      DataOffset = std::min(TextOffset, OS->getFileOff());
     }
 
     // Find the corresponding section (note that `OutputSections` were probably
     // reordered since the time we built `File->sections`).
     bool SectionFound = false;
-    for (Section Sec : File->sections) {
+    for (Section &Sec : File->sections) {
       if (Sec.sectionName == translateSectionName(OS->Name)) {
         Sec.address = OS->getRVA();
         Sec.content = ArrayRef<uint8_t>(nullptr, OS->getVirtualSize());
@@ -801,8 +806,8 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
     }
     assert(SectionFound);
   }
-  File->segments[1].size = DataLastRVA + DataLastSize; // __DATA segment
-  File->segments[1].address = DataRVA;
+  DataSegment.size = DataLastRVA + DataLastSize;
+  DataSegment.address = DataRVA;
 
   // Remove old sections.
   std::vector<Section> NewSections;
@@ -830,8 +835,40 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
 
   // Fix things we know now but cannot be specified in `NormalizedFile` (i.e.,
   // we have to fix them manually in the buffer).
-  // auto Header = reinterpret_cast<MachO::mach_header *>(Buf);
-  // TODO: Fix file offsets.
+  auto *Header = reinterpret_cast<MachO::mach_header *>(Buf);
+  auto *Cmd = reinterpret_cast<MachO::load_command *>(Header + 1);
+  for (size_t I = 0, IEnd = Header->ncmds; I != IEnd; ++I) {
+    if (Cmd->cmd == MachO::LC_SEGMENT) {
+      // Fix segment's file offset.
+      auto *Seg = reinterpret_cast<MachO::segment_command *>(Cmd);
+      if (!strncmp(Seg->segname, "__TEXT", 16))
+        Seg->fileoff = TextOffset;
+      else if (!strncmp(Seg->segname, "__DATA", 16))
+        Seg->fileoff = DataOffset;
+      else
+        llvm_unreachable("Unexpected segment.");
+
+      for (auto *Sect = reinterpret_cast<MachO::section *>(Seg + 1),
+                *EndSect = Sect + Seg->nsects;
+           Sect != EndSect; ++Sect) {
+        // Find the corresponding `OutputSection`.
+        OutputSection *OutputSect = nullptr;
+        for (OutputSection *OS : *OutputSections) {
+          if (!strncmp(translateSectionName(OS->Name).data(), Sect->sectname,
+                       16)) {
+            OutputSect = OS;
+            break;
+          }
+        }
+
+        // Fix section's file offset.
+        Sect->offset = OutputSect->getFileOff();
+      }
+    }
+
+    Cmd = reinterpret_cast<MachO::load_command *>(
+        reinterpret_cast<uint8_t *>(Cmd) + Cmd->cmdsize);
+  }
 }
 MhdrChunk *MhdrChunk::Instance;
 
