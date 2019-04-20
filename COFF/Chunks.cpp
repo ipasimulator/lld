@@ -670,12 +670,12 @@ void MergeChunk::writeTo(uint8_t *Buf) const {
 // See also `MachObjectWriter::writeObject` and
 // `MachOFileLayout::MachOFileLayout`.
 MhdrChunk::~MhdrChunk() { delete File; }
-StringRef translateSectionName(StringRef name) {
-  if (name.startswith(".")) {
+StringRef translateSectionName(StringRef Name) {
+  if (Name.startswith(".")) {
     // TODO: How to allocate new string correctly in LLVM?
-    return *make<std::string>(("__" + name.substr(1)).str());
+    return *make<std::string>(("__" + Name.substr(1)).str());
   }
-  return name;
+  return Name;
 }
 void MhdrChunk::finalizeContents() {
   using namespace lld::mach_o::normalized;
@@ -698,69 +698,69 @@ void MhdrChunk::finalizeContents() {
   // By convention (see `getsectiondata` in `libobjc` and also some normal
   // `.dylib`s), the segment `__TEXT` should start at the Mach-O header
   // (although there is no section for it).
-  Segment textSeg;
-  textSeg.name = "__TEXT";
-  textSeg.address = 0;
-  textSeg.size = 4096;
-  textSeg.init_access =
+  Segment TextSeg;
+  TextSeg.name = "__TEXT";
+  TextSeg.address = 0;
+  TextSeg.size = 4096;
+  TextSeg.init_access =
       MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
-  textSeg.max_access = textSeg.init_access;
+  TextSeg.max_access = TextSeg.init_access;
 
   // Everything else is searched in segment `__DATA` (see `getDataSection` in
   // `libobjc`). So, for simplicity, we put everything else into that segment
   // (even code) for now.
-  Segment dataSeg;
-  dataSeg.name = "__DATA";
-  dataSeg.address = 4096;
-  dataSeg.init_access =
+  Segment DataSeg;
+  DataSeg.name = "__DATA";
+  DataSeg.address = 4096;
+  DataSeg.init_access =
       MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
-  dataSeg.max_access = dataSeg.init_access;
-  uint64_t dataSize = 0;
+  DataSeg.max_access = DataSeg.init_access;
+  uint64_t DataSize = 0;
 
-  uint64_t dataRva = 4096;
-  for (auto &&os : *OutputSections) {
-    StringRef segName;
-    uint64_t rva;
-    if (os->Name == ".mhdr") {
-      segName = textSeg.name;
-      rva = 0;
+  uint64_t DataRVA = 4096;
+  for (OutputSection *OS : *OutputSections) {
+    StringRef SegName;
+    uint64_t RVA;
+    if (OS->Name == ".mhdr") {
+      SegName = TextSeg.name;
+      RVA = 0;
     } else {
-      dataSize += 4096;
-      segName = dataSeg.name;
-      rva = dataRva;
-      dataRva += 4096;
+      DataSize += 4096;
+      SegName = DataSeg.name;
+      RVA = DataRVA;
+      DataRVA += 4096;
     }
 
-    Section section;
-    section.segmentName = segName;
-    section.sectionName = translateSectionName(os->Name);
-    section.address = rva;
-    section.content = ArrayRef<uint8_t>(nullptr, 4096);
-    File->sections.push_back(std::move(section));
+    Section Section;
+    Section.segmentName = SegName;
+    Section.sectionName = translateSectionName(OS->Name);
+    Section.address = RVA;
+    Section.content = ArrayRef<uint8_t>(nullptr, 4096);
+    File->sections.push_back(std::move(Section));
   }
 
-  dataSeg.size = dataSize;
-  File->segments.push_back(std::move(textSeg));
-  File->segments.push_back(std::move(dataSeg));
+  DataSeg.size = DataSize;
+  File->segments.push_back(std::move(TextSeg));
+  File->segments.push_back(std::move(DataSeg));
 
   // Add dependent libraries.
   {
-    std::vector<StringRef> dlls;
+    std::vector<StringRef> DLLs;
     Symtab->forEachSymbol([&](Symbol *s) {
-      if (auto imp = dyn_cast<DefinedImportData>(s)) {
-        dlls.push_back(imp->getDLLName());
+      if (auto Imp = dyn_cast<DefinedImportData>(s)) {
+        DLLs.push_back(Imp->getDLLName());
       }
     });
-    std::sort(dlls.begin(), dlls.end());
-    dlls.erase(std::unique(dlls.begin(), dlls.end()), dlls.end());
-    for (auto &&dll : dlls) {
-      DependentDylib dylib;
-      dylib.path = dll;
-      dylib.kind = MachO::LC_LOAD_DYLIB;
-      dylib.compatVersion = 0;
-      dylib.currentVersion = 0;
+    std::sort(DLLs.begin(), DLLs.end());
+    DLLs.erase(std::unique(DLLs.begin(), DLLs.end()), DLLs.end());
+    for (StringRef DLL : DLLs) {
+      DependentDylib Dylib;
+      Dylib.path = DLL;
+      Dylib.kind = MachO::LC_LOAD_DYLIB;
+      Dylib.compatVersion = 0;
+      Dylib.currentVersion = 0;
 
-      File->dependentDylibs.push_back(std::move(dylib));
+      File->dependentDylibs.push_back(std::move(Dylib));
     }
   }
 
@@ -773,63 +773,64 @@ void MhdrChunk::writeTo(uint8_t *Buf) const {
   // Fix some things inside `NormalizedFile` we know now.
 
   // Fix section RVAs and sizes.
-  uint64_t dataRva = std::numeric_limits<uint64_t>::max();
-  uint64_t dataLastRva = 0;
-  uint64_t dataLastSize = 0;
-  for (auto &&os : *OutputSections) {
-    if (os->Name == ".mhdr") {
-      File->segments[0].size = os->getVirtualSize(); // __TEXT
-      File->segments[0].address = os->getRVA();
+  uint64_t DataRVA = std::numeric_limits<uint64_t>::max();
+  uint64_t DataLastRVA = 0;
+  uint64_t DataLastSize = 0;
+  for (OutputSection *OS : *OutputSections) {
+    if (OS->Name == ".mhdr") {
+      File->segments[0].size = OS->getVirtualSize(); // __TEXT segment
+      File->segments[0].address = OS->getRVA();
     } else {
-      dataRva = std::min(dataRva, os->getRVA());
-      if (os->getRVA() > dataLastRva) {
-        dataLastRva = os->getRVA();
-        dataLastSize = os->getVirtualSize();
+      DataRVA = std::min(DataRVA, OS->getRVA());
+      if (OS->getRVA() > DataLastRVA) {
+        DataLastRVA = OS->getRVA();
+        DataLastSize = OS->getVirtualSize();
       }
     }
 
     // Find the corresponding section (note that `OutputSections` were probably
     // reordered since the time we built `File->sections`).
-    bool sectionFound = false;
-    for (auto &&sec : File->sections) {
-      if (sec.sectionName == translateSectionName(os->Name)) {
-        sec.address = os->getRVA();
-        sec.content = ArrayRef<uint8_t>(nullptr, os->getVirtualSize());
-        sectionFound = true;
+    bool SectionFound = false;
+    for (Section Sec : File->sections) {
+      if (Sec.sectionName == translateSectionName(OS->Name)) {
+        Sec.address = OS->getRVA();
+        Sec.content = ArrayRef<uint8_t>(nullptr, OS->getVirtualSize());
+        SectionFound = true;
         break;
       }
     }
-    assert(sectionFound);
+    assert(SectionFound);
   }
-  File->segments[1].size = dataLastRva + dataLastSize; // __DATA
-  File->segments[1].address = dataRva;
+  File->segments[1].size = DataLastRVA + DataLastSize; // __DATA segment
+  File->segments[1].address = DataRVA;
 
   // Remove old sections.
-  std::vector<Section> newSections;
-  newSections.reserve(OutputSections->size());
-  for (auto &&sec : File->sections) {
-    bool sectionFound = false;
-    for (auto &&os : *OutputSections) {
-      if (translateSectionName(os->Name) == sec.sectionName) {
-        sectionFound = true;
+  std::vector<Section> NewSections;
+  NewSections.reserve(OutputSections->size());
+  for (Section &Sec : File->sections) {
+    bool SectionFound = false;
+    for (OutputSection *OS : *OutputSections) {
+      if (translateSectionName(OS->Name) == Sec.sectionName) {
+        SectionFound = true;
         break;
       }
     }
-    if (sectionFound) {
-      newSections.push_back(std::move(sec));
+    if (SectionFound) {
+      NewSections.push_back(std::move(Sec));
     }
   }
-  File->sections = std::move(newSections);
+  File->sections = std::move(NewSections);
 
   // Write Mach-O header and load commands using the `NormalizedFile` filled
   // inside `finalizeContents`.
-  if (llvm::Error E = lld::mach_o::normalized::writeHeaderAndLoadCommands(*File, Buf)) {
+  if (llvm::Error E =
+          lld::mach_o::normalized::writeHeaderAndLoadCommands(*File, Buf)) {
     error("constructing Mach-O header failed: " + llvm::toString(std::move(E)));
   }
 
   // Fix things we know now but cannot be specified in `NormalizedFile` (i.e.,
   // we have to fix them manually in the buffer).
-  // auto header = reinterpret_cast<MachO::mach_header *>(Buf);
+  // auto Header = reinterpret_cast<MachO::mach_header *>(Buf);
   // TODO: Fix file offsets.
 }
 MhdrChunk *MhdrChunk::Instance;
