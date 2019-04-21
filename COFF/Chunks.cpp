@@ -677,7 +677,7 @@ StringRef translateSectionName(StringRef Name) {
   // TODO: How to allocate new string correctly in LLVM?
   if (Name.equals(".mhdr") || Name.startswith(".objc_"))
     return *make<std::string>(("__" + Name.substr(1)).str());
-  if (Name.startswith("."))
+  if (strchr(Name.data(), '$'))
     // HACK: For some weird reason, this removes `$*` postfixes, which is
     // actually what we want to do here (and in the `if` above, as well).
     return *make<std::string>(Name.str());
