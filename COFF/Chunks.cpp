@@ -675,7 +675,8 @@ StringRef translateSectionName(StringRef Name) {
   // `.data` and `__data`, for example, and this translation would lead to
   // duplicate sections.
   // TODO: How to allocate new string correctly in LLVM?
-  if (Name.equals(".mhdr") || Name.startswith(".objc_"))
+  if (Name.equals(".mhdr") || Name.equals(".fixbind") ||
+      Name.startswith(".objc_"))
     return *make<std::string>(("__" + Name.substr(1)).str());
   if (strchr(Name.data(), '$'))
     // HACK: For some weird reason, this removes `$*` postfixes, which is
